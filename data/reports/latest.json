@@ -1,0 +1,32 @@
+{
+  "session": {
+    "title": "Live session",
+    "duration_min": 0.3,
+    "source": "webcam",
+    "generated": "2026-10-29 16:54"
+  },
+  "kpis": {
+    "present": 0,
+    "total": 1,
+    "attendance_pct": 0.0,
+    "avg_engagement": 0.0,
+    "speech_min": 0.1,
+    "longest_still_min": 0.0,
+    "longest_still_who": "-"
+  },
+  "timeline": [],
+  "students": [],
+  "signals": {
+    "head_pose": null,
+    "movement": null,
+    "activity": null,
+    "audio": null
+  },
+  "suggestions": [
+    {
+      "title": "Follow up on absences",
+      "detail": "Attendance was 0%. Check whether the time or format is a barrier.",
+      "kind": "idea"
+    }
+  ]
+}

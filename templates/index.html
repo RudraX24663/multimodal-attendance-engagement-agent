@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multimodal Attendance &amp; Engagement Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+{% set k = r.kpis %}{% set sg = r.signals %}
+<header>
+  <div>
+    <h1>Attendance &amp; Engagement Agent</h1>
+    <p class="sub">{{ r.session.title }} · {{ r.session.duration_min }} minutes{% if r.session.generated != '-' %} · analysed {{ r.session.generated }}{% endif %}</p>
+  </div>
+  <span class="badge"><span class="dot"></span>Offline mode: all data stays on this device</span>
+</header>
+{% if error %}<div class="err">{{ error }}</div>{% endif %}
+<nav role="tablist" aria-label="Sections">
+  <button role="tab" aria-selected="true" data-tab="overview">Session overview</button>
+  <button role="tab" aria-selected="false" data-tab="students">Students</button>
+  <button role="tab" aria-selected="false" data-tab="arch">How it works</button>
+  <button role="tab" aria-selected="false" data-tab="live">Live session</button>
+  <button role="tab" aria-selected="false" data-tab="new">Analyse a video</button>
+</nav>
+
+<section class="panel" id="overview">
+  {% if r.is_sample %}<p class="note" style="margin-top:0">Showing demo data. Use “Analyse a video” to see your own session.</p>{% endif %}
+  <div class="grid kpis">
+    <div class="card kpi"><div class="l">Present</div><div class="v">{{ k.present }} of {{ k.total }}</div><div class="d" style="color:var(--ok)">{{ k.attendance_pct|round|int }}% attendance</div></div>
+    <div class="card kpi"><div class="l">Average engagement</div><div class="v">{{ k.avg_engagement|round|int }}%</div></div>
+    <div class="card kpi"><div class="l">Speech detected</div><div class="v">{% if k.speech_min is none %}n/a{% else %}{{ k.speech_min|round|int }} min{% endif %}</div><div class="d" style="color:var(--muted)">{% if k.speech_min is none %}No audio found{% else %}Any speaker{% endif %}</div></div>
+    <div class="card kpi"><div class="l">Longest still stretch</div><div class="v">{{ k.longest_still_min }} min</div><div class="d" style="color:var(--muted)">{{ k.longest_still_who }}</div></div>
+  </div>
+  <div class="grid two">
+    <div class="card">
+      <h2>Engagement through the session</h2>
+      <p class="hint">Combined score from head pose, movement and audio activity per time window.</p>
+      <svg id="chart" viewBox="0 0 640 260" role="img" aria-label="Engagement score over the session"></svg>
+    </div>
+    <div class="card">
+      <h2>What drives the score</h2>
+      <p class="hint">Average across the session.</p>
+      {% for key, label in [('head_pose','Head pose'),('movement','Movement'),('activity','Activity'),('audio','Audio')] %}
+      <div class="sig"><span>{{ label }}</span><div class="meter"><i style="width:{{ ((sg[key] or 0)*100)|round|int }}%"></i></div><b>{% if sg[key] is none %}n/a{% else %}{{ (sg[key]*100)|round|int }}%{% endif %}</b></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h2>Suggestions for the instructor</h2>
+    <p class="hint">Based on this session. You decide what to use.</p>
+    <div class="grid two-eq">
+      {% for s in r.suggestions %}<div class="sug {{ 'good' if s.kind == 'good' }}"><b>{{ s.title }}</b>{{ s.detail }}</div>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="students" hidden>
+  <div class="card">
+    <h2>Attendance and engagement by student</h2>
+    <p class="hint">A person is marked present after staying in view continuously for the minimum presence time, so a quick pass in front of the camera doesn’t count.</p>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Student</th><th>First seen</th><th>Minutes present</th><th>Status</th><th>Engagement</th></tr></thead>
+      <tbody>{% for s in r.students %}
+        <tr><td><b>{{ s.name }}</b></td><td>{{ s.first_seen }}</td><td>{{ s.present_min }}</td><td><span class="tag t-ok">Present</span></td>
+        <td><div style="display:flex;gap:8px;align-items:center"><div class="meter" style="flex:1"><i style="width:{{ s.engagement|round|int }}%"></i></div><b>{{ s.engagement|round|int }}%</b></div></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% if not r.is_sample %}<p style="margin-top:14px"><a class="btn ghost" href="{{ url_for('download_csv') }}">Download attendance CSV</a></p>{% endif %}
+  </div>
+</section>
+
+<section class="panel" id="live" hidden>
+  <div class="card">
+    <h2>Record a live session</h2>
+    <p class="hint">Uses this computer’s webcam and microphone. Nothing is saved or sent anywhere except the final scores. Allow camera access if your browser or system asks.</p>
+    <form class="upload" id="liveform" onsubmit="return false">
+      <label>Class size (optional)<input type="number" name="expected" min="1" style="width:130px"></label>
+      <label>Window length<select name="window" style="font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"><option value="60">1 minute</option><option value="30">30 seconds</option><option value="300">5 minutes</option></select></label>
+      <label>Counts as present after<select name="presence" style="font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"><option value="20">20 seconds</option><option value="60">1 minute</option><option value="180">3 minutes</option></select></label>
+      <button class="btn" type="button" id="livestart">Start session</button>
+      <button class="btn ghost" type="button" id="livestop">Stop and analyse</button>
+    </form>
+    <p id="livestatus" class="hint" style="margin-top:14px">Not recording.</p>
+    <img id="feed" alt="Live camera preview with detected faces" hidden style="max-width:100%;border-radius:10px;border:1px solid var(--line)">
+  </div>
+</section>
+
+<section class="panel" id="new" hidden>
+  <div class="card">
+    <h2>Analyse a recorded session</h2>
+    <p class="hint">The video is processed on this computer and is not uploaded anywhere. Long videos can take a few minutes.</p>
+    <form class="upload" method="post" action="{{ url_for('analyze') }}" enctype="multipart/form-data">
+      <label>Video file<input type="file" name="video" accept="video/*" required></label>
+      <label>Class size (optional)<input type="number" name="expected" min="1" style="width:130px"></label>
+      <label>Window length<select name="window" style="font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"><option value="300">5 minutes</option><option value="60">1 minute</option><option value="30">30 seconds</option></select></label>
+      <button class="btn" type="submit">Analyse video</button>
+    </form>
+  </div>
+</section>
+<section class="panel" id="arch" hidden>
+  <div class="card" style="margin-bottom:14px">
+    <h2>From camera and microphone to teaching suggestions</h2>
+    <p class="hint">Each layer does one job and passes its result down. Everything runs on one computer with no internet needed.</p>
+    <div class="arch">
+      <div class="layer"><h3>1. Input</h3><div class="row">
+        <div class="node">Video feed<small>Live camera or recorded file</small></div>
+        <div class="node">Audio feed<small>Microphone or recorded file</small></div></div></div>
+      <div class="flow">frames and sound</div>
+      <div class="layer"><h3>2. Analysis</h3><div class="row">
+        <div class="node">Face detection and tracking<small>Gives each person a steady ID</small></div>
+        <div class="node">Attendance logic<small>Sustained presence, timestamps</small></div>
+        <div class="node">Behavior signals<small>Head pose, movement, inactivity</small></div>
+        <div class="node">Audio signals<small>Speech and interaction level</small></div></div></div>
+      <div class="flow">signals</div>
+      <div class="layer"><h3>3. Fusion</h3><div class="row">
+        <div class="node">Multimodal fusion<small>Combines video and audio into one score</small></div>
+        <div class="node">Trend builder<small>Scores per student and per time window</small></div></div></div>
+      <div class="flow">scores and trends</div>
+      <div class="layer ai"><h3>4. AI agent</h3><div class="row">
+        <div class="node">Pattern reasoning<small>Finds dips, peaks and pacing issues</small></div>
+        <div class="node">Suggestion writer<small>Plain-language teaching tips</small></div></div></div>
+      <div class="flow">insights</div>
+      <div class="layer"><h3>5. Dashboard and storage</h3><div class="row">
+        <div class="node">Dashboard<small>Attendance, analytics, reports</small></div>
+        <div class="node">Local storage<small>Logs and reports on this device</small></div></div></div>
+    </div>
+    <div class="lock"><span class="badge">Privacy</span><span>No images or audio are uploaded. The system keeps scores and logs, and the instructor stays in control of every decision.</span></div>
+  </div>
+</section>
+
+<p class="note">The agent supports teaching decisions. It doesn’t grade or discipline students.</p>
+</div>
+<script>
+var T={{ r.timeline|tojson }};
+(function(){
+  var s=document.getElementById("chart"),W=640,H=260,l=40,rr=12,t=14,b=34,n=T.length,h="";
+  if(!n){s.innerHTML='<text class="lbl" x="320" y="130" text-anchor="middle">No engagement data yet</text>';return}
+  function x(i){return n>1?l+i*(W-l-rr)/(n-1):W/2}function y(v){return t+(100-v)*(H-t-b)/100}
+  [0,25,50,75,100].forEach(function(v){h+='<line class="axis" x1="'+l+'" x2="'+(W-rr)+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text class="lbl" x="'+(l-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+v+'</text>'});
+  var lo=0;T.forEach(function(p,i){if(p.engagement<T[lo].engagement)lo=i});
+  h+='<polyline points="'+T.map(function(p,i){return x(i)+","+y(p.engagement)}).join(" ")+'" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+  T.forEach(function(p,i){h+='<circle cx="'+x(i)+'" cy="'+y(p.engagement)+'" r="'+(i==lo?6:3.5)+'" fill="'+(i==lo?"var(--warn)":"var(--brand)")+'"/><text class="lbl" x="'+x(i)+'" y="'+(H-12)+'" text-anchor="middle">'+p.minute+'</text>'});
+  if(n>1)h+='<text class="lbl" x="'+x(lo)+'" y="'+(y(T[lo].engagement)+22)+'" text-anchor="middle" style="fill:var(--warn);font-weight:600">Lowest: '+Math.round(T[lo].engagement)+'%</text>';
+  h+='<text class="lbl" x="'+(W-rr)+'" y="'+(H-1)+'" text-anchor="end">minutes</text>';
+  s.innerHTML=h;
+})();
+var tabs=document.querySelectorAll("nav button"),ids=["overview","students","arch","live","new"];
+function show(id){tabs.forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===id)});ids.forEach(function(p){document.getElementById(p).hidden=p!==id})}
+tabs.forEach(function(b){b.addEventListener("click",function(){show(b.dataset.tab)})});
+var feed=document.getElementById("feed"),lst=document.getElementById("livestatus"),timer=null;
+function post(u,fd){return fetch(u,{method:"POST",body:fd}).then(function(r){return r.json()})}
+function poll(){fetch("/live/status").then(function(r){return r.json()}).then(function(s){if(!s.running)return;lst.textContent="Recording "+s.elapsed+" s · faces in view: "+s.faces+" · marked present: "+s.present+(s.mic?" · microphone on":" · no microphone (video-only score)")})}
+document.getElementById("livestart").onclick=function(){post("/live/start",new FormData(document.getElementById("liveform"))).then(function(d){if(d.error){lst.textContent=d.error;return}feed.hidden=false;feed.src="/video_feed?"+Date.now();lst.textContent="Starting…";timer=setInterval(poll,1000)})};
+document.getElementById("livestop").onclick=function(){clearInterval(timer);lst.textContent="Analysing…";post("/live/stop",new FormData()).then(function(d){if(d.error){lst.textContent=d.error;return}location.reload()})};
+</script>
+</body>
+</html>
