@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multimodal Attendance &amp; Engagement Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f6f5;--surface:#fff;--ink:#12292b;--muted:#5b6f71;--line:#d8e2e0;--brand:#0f6b6b;--brand-soft:#dcefed;--warn:#c8641e;--warn-soft:#fbe9db;--ok:#2f8a4f;--bad:#b3392f;--bar:#0f6b6b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1a1b;--surface:#142526;--ink:#e6f0ef;--muted:#93a9aa;--line:#264042;--brand:#4cc2bd;--brand-soft:#173a3b;--warn:#f0974f;--warn-soft:#3a2615;--ok:#58c07c;--bad:#ef7b70;--bar:#4cc2bd;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1a1b;--surface:#142526;--ink:#e6f0ef;--muted:#93a9aa;--line:#264042;--brand:#4cc2bd;--brand-soft:#173a3b;--warn:#f0974f;--warn-soft:#3a2615;--ok:#58c07c;--bad:#ef7b70;--bar:#4cc2bd;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.55 Figtree,system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 18px 48px}
+header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:18px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--brand-soft);color:var(--brand);border-radius:99px;padding:5px 12px;font-size:12.5px;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
+nav button{background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:600 14px Figtree,system-ui,sans-serif;padding:10px 14px;cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--brand);border-color:var(--brand)}
+nav button:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.panel[hidden]{display:none}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h2{font-size:15px;margin:0 0 2px;font-weight:700}
+.card .hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.kpi .v{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.kpi .l{color:var(--muted);font-size:13px}
+.kpi .d{font-size:12.5px;margin-top:4px;font-weight:600}
+.two{grid-template-columns:2fr 1fr}
+.two-eq{grid-template-columns:1fr 1fr}
+@media(max-width:820px){.two,.two-eq{grid-template-columns:1fr}}
+svg{width:100%;height:auto;display:block}
+.axis{stroke:var(--line)}
+.lbl{fill:var(--muted);font:12px Figtree,system-ui,sans-serif}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:12.5px;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:9px 8px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+.tag{border-radius:99px;padding:2px 10px;font-size:12px;font-weight:600}
+.t-ok{background:var(--brand-soft);color:var(--ok)}
+.t-warn{background:var(--warn-soft);color:var(--warn)}
+.meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden;min-width:70px}
+.meter i{display:block;height:100%;background:var(--bar)}
+.sig{display:grid;grid-template-columns:110px 1fr 38px;gap:10px;align-items:center;margin:10px 0;font-size:13.5px}
+.sug{border-left:3px solid var(--warn);background:var(--warn-soft);border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:10px;font-size:14px}
+.sug b{display:block;margin-bottom:2px}
+.sug.good{border-color:var(--ok);background:var(--brand-soft)}
+.note{color:var(--muted);font-size:12.5px;margin-top:18px}
+/* architecture */
+.arch{display:grid;gap:10px}
+.layer{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:14px 16px}
+.layer h3{margin:0 0 10px;font-size:14px;font-weight:700}
+.layer .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.node{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;font-weight:600}
+.node small{display:block;color:var(--muted);font-weight:400;font-size:12.5px;margin-top:2px}
+.layer.ai{border-color:var(--brand);background:var(--brand-soft)}
+.layer.ai .node{background:var(--surface)}
+.flow{text-align:center;color:var(--muted);font-size:13px;line-height:1}
+.flow:before{content:"\2193";display:block;font-size:18px;color:var(--brand)}
+.lock{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Attendance &amp; Engagement Agent</h1>
+    <p class="sub">Data Structures lecture, Section B · 60 minutes · sample session</p>
+  </div>
+  <span class="badge"><span class="dot"></span>Offline mode: all data stays on this device</span>
+</header>
+
+<nav role="tablist" aria-label="Sections">
+  <button role="tab" aria-selected="true" data-tab="overview">Session overview</button>
+  <button role="tab" aria-selected="false" data-tab="students">Students</button>
+  <button role="tab" aria-selected="false" data-tab="arch">How it works</button>
+</nav>
+
+<section class="panel" id="overview">
+  <div class="grid kpis">
+    <div class="card kpi"><div class="l">Present</div><div class="v">7 of 8</div><div class="d" style="color:var(--ok)">88% attendance</div></div>
+    <div class="card kpi"><div class="l">Average engagement</div><div class="v" id="avg">0%</div><div class="d" style="color:var(--warn)">Dip at minutes 25–35</div></div>
+    <div class="card kpi"><div class="l">Speaking time</div><div class="v">18 min</div><div class="d" style="color:var(--muted)">Instructor 14 · Students 4</div></div>
+    <div class="card kpi"><div class="l">Longest inactive stretch</div><div class="v">6 min</div><div class="d" style="color:var(--muted)">Arjun K., minutes 28–34</div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <h2>Engagement through the session</h2>
+      <p class="hint">Combined score from head pose, movement and audio activity, every 5 minutes.</p>
+      <svg id="chart" viewBox="0 0 640 260" role="img" aria-label="Engagement score over 60 minutes, lowest at minute 30"></svg>
+    </div>
+    <div class="card">
+      <h2>What drives the score</h2>
+      <p class="hint">Average across the session.</p>
+      <div class="sig"><span>Head pose</span><div class="meter"><i style="width:74%"></i></div><b>74%</b></div>
+      <div class="sig"><span>Movement</span><div class="meter"><i style="width:68%"></i></div><b>68%</b></div>
+      <div class="sig"><span>Activity</span><div class="meter"><i style="width:81%"></i></div><b>81%</b></div>
+      <div class="sig"><span>Audio</span><div class="meter"><i style="width:52%"></i></div><b>52%</b></div>
+      <p class="hint" style="margin-top:14px">Audio is lowest because most of the session was lecture-style.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>Suggestions for the instructor</h2>
+    <p class="hint">Based on this session. You decide what to use.</p>
+    <div class="grid two-eq">
+      <div class="sug"><b>Add a break or quick poll around minute 25</b>Engagement fell from 76% to 49% in ten minutes while the lecture ran without interaction.</div>
+      <div class="sug"><b>Use a pair discussion after long explanations</b>Student speaking time was only 4 minutes. Short discussions can raise participation.</div>
+      <div class="sug good"><b>The worked example at minute 45 worked well</b>Engagement recovered to 80% after the live coding example. Consider repeating that format.</div>
+      <div class="sug"><b>Check in with Arjun K.</b>Inactive for 6 minutes during the dip. This may be a pacing issue rather than a personal one.</div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="students" hidden>
+  <div class="card">
+    <h2>Attendance and engagement by student</h2>
+    <p class="hint">A student is marked present after staying in view for 3 minutes in a row, so a quick pass in front of the camera doesn't count.</p>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Student</th><th>First seen</th><th>Time present</th><th>Status</th><th>Engagement</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+    <p class="note">Sample data for demonstration. Reports can be exported as CSV or PDF.</p>
+  </div>
+</section>
+
+<section class="panel" id="arch" hidden>
+  <div class="card" style="margin-bottom:14px">
+    <h2>From camera and microphone to teaching suggestions</h2>
+    <p class="hint">Each layer does one job and passes its result down. Everything runs on one computer with no internet needed.</p>
+    <div class="arch">
+      <div class="layer"><h3>1. Input</h3><div class="row">
+        <div class="node">Video feed<small>Live camera or recorded file</small></div>
+        <div class="node">Audio feed<small>Microphone or recorded file</small></div></div></div>
+      <div class="flow">frames and sound</div>
+      <div class="layer"><h3>2. Analysis</h3><div class="row">
+        <div class="node">Face detection and tracking<small>Gives each person a steady ID</small></div>
+        <div class="node">Attendance logic<small>Sustained presence, timestamps</small></div>
+        <div class="node">Behavior signals<small>Head pose, movement, inactivity</small></div>
+        <div class="node">Audio signals<small>Speech and interaction level</small></div></div></div>
+      <div class="flow">signals</div>
+      <div class="layer"><h3>3. Fusion</h3><div class="row">
+        <div class="node">Multimodal fusion<small>Combines video and audio into one score</small></div>
+        <div class="node">Trend builder<small>Scores per student and per time window</small></div></div></div>
+      <div class="flow">scores and trends</div>
+      <div class="layer ai"><h3>4. AI agent</h3><div class="row">
+        <div class="node">Pattern reasoning<small>Finds dips, peaks and pacing issues</small></div>
+        <div class="node">Suggestion writer<small>Plain-language teaching tips</small></div></div></div>
+      <div class="flow">insights</div>
+      <div class="layer"><h3>5. Dashboard and storage</h3><div class="row">
+        <div class="node">Dashboard<small>Attendance, analytics, reports</small></div>
+        <div class="node">Local storage<small>Logs and reports on this device</small></div></div></div>
+    </div>
+    <div class="lock"><span class="badge">Privacy</span><span>No images or audio are uploaded. The system keeps scores and logs, and the instructor stays in control of every decision.</span></div>
+  </div>
+</section>
+
+<p class="note">The agent supports teaching decisions. It doesn’t grade or discipline students.</p>
+</div>
+
+<script>
+var E=[72,78,81,76,69,58,49,54,66,74,80,77];
+var S=[["Ananya R.","09:02","58 min",1,84],["Rahul M.","09:01","60 min",1,79],["Priya S.","09:04","55 min",1,88],["Arjun K.","09:03","57 min",1,52],["Meera D.","09:12","46 min",1,71],["Karthik V.","09:02","60 min",1,76],["Sneha P.","09:05","53 min",1,81],["Imran A.","Not seen","0 min",0,0]];
+document.getElementById("avg").textContent=Math.round(E.reduce(function(a,b){return a+b},0)/E.length)+"%";
+(function(){
+  var s=document.getElementById("chart"),W=640,H=260,l=40,r=12,t=14,b=34,n=E.length,h="";
+  function x(i){return l+i*(W-l-r)/(n-1)}function y(v){return t+(100-v)*(H-t-b)/100}
+  [0,25,50,75,100].forEach(function(v){h+='<line class="axis" x1="'+l+'" x2="'+(W-r)+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text class="lbl" x="'+(l-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+v+'</text>'});
+  h+='<rect x="'+x(4)+'" y="'+t+'" width="'+(x(7)-x(4))+'" height="'+(H-t-b)+'" fill="var(--warn-soft)"/>';
+  var p=E.map(function(v,i){return x(i)+","+y(v)}).join(" ");
+  h+='<polyline points="'+p+'" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+  E.forEach(function(v,i){h+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="'+(i==6?6:3.5)+'" fill="'+(i==6?"var(--warn)":"var(--brand)")+'"/><text class="lbl" x="'+x(i)+'" y="'+(H-12)+'" text-anchor="middle">'+(i*5)+'</text>'});
+  h+='<text class="lbl" x="'+x(6)+'" y="'+(y(49)+22)+'" text-anchor="middle" style="fill:var(--warn);font-weight:600">Lowest: 49%</text>';
+  h+='<text class="lbl" x="'+(W-r)+'" y="'+(H-1)+'" text-anchor="end">minutes</text>';
+  s.innerHTML=h;
+})();
+document.getElementById("rows").innerHTML=S.map(function(s){
+  return "<tr><td><b>"+s[0]+"</b></td><td>"+s[1]+"</td><td>"+s[2]+"</td><td><span class='tag "+(s[3]?"t-ok":"t-warn")+"'>"+(s[3]?"Present":"Absent")+"</span></td><td>"+(s[3]?"<div style='display:flex;gap:8px;align-items:center'><div class='meter' style='flex:1'><i style='width:"+s[4]+"%'></i></div><b>"+s[4]+"%</b></div>":"–")+"</td></tr>"}).join("");
+var tabs=document.querySelectorAll("nav button");
+function show(id){tabs.forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===id)});["overview","students","arch"].forEach(function(p){document.getElementById(p).hidden=p!==id})}
+tabs.forEach(function(b){b.addEventListener("click",function(){show(b.dataset.tab)})});
+var hv=(location.hash||"").slice(1);if(["overview","students","arch"].indexOf(hv)>-1)show(hv);
+</script>
+</body>
+</html>
